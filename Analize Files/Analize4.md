@@ -27,18 +27,18 @@
 ```bat
 # 原来（已废弃）
 start  python/python.exe src/main.py
-start  python/python.exe src/change_data.py
 ```
 
-**已于本次操作中修改为指向 Conda 环境：**
+**已于本次操作中修改为智能启动逻辑：**
 
 ```bat
 # 现在（已生效）
-start  D:\Anaconda\envs\Spider\python.exe src/main.py
-start  D:\Anaconda\envs\Spider\python.exe src/change_data.py
+:: 1. 尝试使用 Conda (Spider 环境)
+:: 2. 尝试使用便携式 Python (python/python.exe)
+:: 3. 尝试使用系统 Python
 ```
 
-✅ 两个 bat 文件均已修改完毕，可以放心删除 `python/`。
+✅ 两个 bat 文件均已修改完毕，可以放心删除 `python/`（如果不作为备用的话）。
 
 ---
 
@@ -303,4 +303,168 @@ python main.py
 
 > ⚠️ 删除前请确认 Conda 环境验证已全部通过（见 Analize3.md 第9节）。  
 > ⚠️ 删除操作不可撤销，如有顾虑请先把 `python/` 整体剪切到其他地方备份。
+
+---
+
+## 8. 在 PyCharm 中使用 Git 忽略文件
+
+### 8.1 什么是 .gitignore
+
+`.gitignore` 是一个文本文件，列在里面的文件/文件夹会被 Git **完全忽略**，不会被追踪、不会被提交到仓库。  
+对于本项目，最重要的就是忽略 `python/` 目录（400MB+）和 `cache/`、`Output/` 这类运行时产物。
+
+---
+
+### 8.2 本项目已生成的 .gitignore
+
+已在项目根目录创建 `.gitignore`，内容如下（已按类别分组）：
+
+```gitignore
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+
+# 项目自带便携式 Python（体积巨大，不上传）
+python/
+
+# 运行产生的缓存和输出
+cache/
+Output/
+
+# PyCharm 本地配置
+.idea/
+*.iml
+
+# Windows 系统文件
+Thumbs.db
+Desktop.ini
+
+# 日志
+*.log
+
+# 敏感配置
+.env
+secrets.py
+
+# 虚拟环境
+venv/
+.venv/
+```
+
+---
+
+### 8.3 在 PyCharm 中初始化 Git 仓库（如果还没有）
+
+**方法一：菜单操作**
+
+```
+顶部菜单 → VCS → Create Git Repository
+→ 选择项目根目录 D:\Coding\PycharmCode\Spider
+→ 点击 OK
+```
+
+**方法二：PowerShell 命令**
+
+```powershell
+cd D:\Coding\PycharmCode\Spider
+git init
+git add .gitignore
+git commit -m "初始化仓库，添加 .gitignore"
+```
+
+---
+
+### 8.4 在 PyCharm 中忽略文件的三种方式
+
+#### 方式一：直接编辑 .gitignore 文件（最推荐）
+
+1. 在 PyCharm 左侧项目树找到 `.gitignore` 文件，双击打开
+2. 在文件里直接添加要忽略的路径，每行一条，例如：
+   ```
+   python/
+   cache/
+   Output/
+   *.log
+   ```
+3. 保存即生效，Git 会立刻忽略这些路径
+
+---
+
+#### 方式二：右键菜单快速添加到 .gitignore
+
+1. 在 PyCharm 左侧项目树中，**右键点击**你想忽略的文件或文件夹
+2. 选择 `Git` → `Add to .gitignore`
+3. PyCharm 会自动把该路径写入 `.gitignore`
+
+> 如果没有看到这个菜单，说明还没安装 `.ignore` 插件，见 8.6 节。
+
+---
+
+#### 方式三：通过 Git 工具窗口忽略
+
+1. 顶部菜单 → `Git` → `Commit`（或按 `Ctrl+K`）
+2. 在弹出的提交窗口里，找到你不想提交的文件
+3. 右键该文件 → `Add to .gitignore`
+4. 选择忽略规则后确认
+
+---
+
+### 8.5 常用 .gitignore 语法速查
+
+| 写法 | 含义 | 示例 |
+|---|---|---|
+| `python/` | 忽略名为 python 的整个目录 | `python/` |
+| `*.log` | 忽略所有 .log 文件 | `*.log` |
+| `cache/` | 忽略 cache 目录 | `cache/` |
+| `!important.log` | 例外，不忽略这个文件 | `!keep.txt` |
+| `**/temp/` | 忽略任意层级下名为 temp 的目录 | `**/temp/` |
+| `Output/*.xlsx` | 忽略 Output 目录下所有 xlsx | `Output/*.xlsx` |
+| `#` 开头 | 注释行，不生效 | `# 这是注释` |
+
+---
+
+### 8.6 安装 .ignore 插件（让 PyCharm 支持右键菜单忽略）
+
+1. 顶部菜单 → `File` → `Settings`（`Ctrl+Alt+S`）
+2. 左侧选 `Plugins`
+3. 搜索框输入 `.ignore`
+4. 找到 `.ignore` 插件，点击 `Install`
+5. 重启 PyCharm 后生效
+
+安装后右键任何文件都能看到 `Add to .gitignore` 选项。
+
+---
+
+### 8.7 已被 Git 追踪的文件如何补救忽略
+
+如果某个文件**已经被 git add 追踪过了**，即使加入 `.gitignore` 也不会生效，需要先把它从 Git 缓存中移除：
+
+```powershell
+# 只从 Git 追踪中移除，不删除本地文件
+git rm -r --cached python/
+git rm -r --cached cache/
+git rm -r --cached Output/
+
+# 然后重新提交
+git add .gitignore
+git commit -m "从追踪中移除 python/ cache/ Output/ 目录"
+```
+
+> ⚠️ `--cached` 参数表示只删除 Git 里的记录，**不会删除你本地的文件**，放心执行。
+
+---
+
+### 8.8 验证 .gitignore 是否生效
+
+```powershell
+# 检查某个路径是否被忽略（有输出=已忽略，无输出=未忽略）
+git check-ignore -v python/
+git check-ignore -v cache/
+git check-ignore -v Output/
+
+# 查看当前未追踪但未被忽略的文件
+git status
+```
+
+如果 `git status` 里看不到 `python/`、`cache/`、`Output/`，说明忽略规则已经生效。
 

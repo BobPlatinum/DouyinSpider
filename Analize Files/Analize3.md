@@ -43,10 +43,10 @@
 在 PowerShell 里执行：
 
 ```powershell
-D:\Coding\PycharmCode\Spider\python\python.exe -m pip list --format=freeze > D:\Coding\PycharmCode\Spider\Requirements\requirements.txt
+python\python.exe -m pip list --format=freeze > requirements.txt
 ```
 
-这会在 `Requirements/requirements.txt` 写入最新清单。
+这会在 `requirements.txt` 写入最新清单。
 
 **步骤 2：新建 Conda 环境**
 

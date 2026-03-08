@@ -107,13 +107,25 @@ def get_user(tab, csv_path: str) -> tuple:
     fans = fans_raw.replace("粉丝", "").strip()
 
     # ── IP 属地 ──────────────────────────────────────────────────────────
-    ip_raw = _ele_text(
-        tab,
-        "xpath:.//span[contains(.,'IP属地')]",
-        "xpath:.//p[contains(.,'IP属地')]",
-        "xpath:.//div[contains(.,'IP属地')]",
-    )
-    ip_address = ip_raw.replace("IP属地：", "").replace("IP属地:", "").strip()
+    # 优先使用页面可见纯文本进行正则匹配（解决标签分离导致 XPath 提取为空的问题）
+    ip_address = ""
+    try:
+        # 获取页面所有文本（自动合并了标签，解决了 <span>IP属地：</span><span>安徽</span> 这种分离结构）
+        match = re.search(r"IP属地[：:]\s*(\S+)", tab.text)
+        if match:
+            ip_address = match.group(1).strip()
+    except Exception:
+        pass
+
+    # 如果正则没拿到，再尝试 XPath 兜底
+    if not ip_address:
+        ip_raw = _ele_text(
+            tab,
+            "xpath:.//span[contains(.,'IP属地')]",
+            "xpath:.//p[contains(.,'IP属地')]",
+            "xpath:.//div[contains(.,'IP属地')]",
+        )
+        ip_address = ip_raw.replace("IP属地：", "").replace("IP属地:", "").strip()
 
     print(f"获取到用户:{user}  粉丝:{fans}  属地:{ip_address}")
     info = {
@@ -134,8 +146,22 @@ def crawl_url(url: str, csv_path: str,
     stop_event : 外部传入的停止信号（GUI 停止按钮）
     max_count  : 最多爬取多少个新用户，0 表示不限
     """
+    global driver  # 声明使用全局 driver 变量，以便重启时修改它
+
     def _stopped():
         return stop_event is not None and stop_event.is_set()
+
+    # ── 检查浏览器连接状态 ────────────────────────────────────────────────
+    try:
+        # 尝试访问 driver.url 来检查连接是否正常
+        _ = driver.url
+    except Exception:
+        print("⚠️ 检测到浏览器已关闭或断开连接，正在重新启动浏览器...")
+        try:
+            driver = ChromiumPage(addr_or_opts=co)
+        except Exception as e:
+            print(f"❌ 无法启动浏览器: {e}")
+            return
 
     try:
         if driver.url != url:
